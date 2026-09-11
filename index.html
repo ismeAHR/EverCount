@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EverCount</title>
+    <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22EverCount%22%2C%22short_name%22%3A%22EverCount%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230b1311%22%2C%22theme_color%22%3A%22%2310b981%22%7D">
+    <style>
+        :root {
+            --bg-color: #0b1311;
+            --card-bg: rgba(22, 38, 34, 0.6);
+            --border-color: rgba(52, 211, 153, 0.2);
+            --primary-glow: #10b981;
+            --text-main: #ecfdf5;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+            --clock-bg: rgba(11, 19, 17, 0.3);
+            --counter-bg: rgba(11, 19, 17, 0.4);
+            --note-item-bg: rgba(22, 38, 34, 0.4);
+            --modal-bg: #162622;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f0fdf4;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(16, 185, 129, 0.25);
+            --primary-glow: #059669;
+            --text-main: #064e3b;
+            --text-muted: #4b5563;
+            --danger: #dc2626;
+            --clock-bg: rgba(209, 250, 229, 0.5);
+            --counter-bg: rgba(240, 253, 244, 0.8);
+            --note-item-bg: rgba(240, 253, 244, 0.9);
+            --modal-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.05) 0%, transparent 40%);
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        #splashScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+
+        .splash-salam {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #34d399;
+            text-shadow: 0 0 25px rgba(52, 211, 153, 0.5);
+            letter-spacing: 2px;
+            opacity: 0;
+            transform: scale(0.9);
+            animation: salamAnim 1.2s ease forwards;
+            direction: rtl;
+        }
+
+        .splash-app-name {
+            margin-top: 12px;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            letter-spacing: 1.5px;
+            opacity: 0;
+            animation: fadeInText 0.8s ease forwards 0.4s;
+            text-transform: uppercase;
+        }
+
+        @keyframes salamAnim {
+            0% { opacity: 0; transform: scale(0.85); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes fadeInText {
+            to { opacity: 1; }
+        }
+
+        .fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            position: relative;
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 0.6s ease 0.2s;
+        }
+
+        .container.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary-glow);
+            letter-spacing: 0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .theme-toggle-btn, .menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-main);
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .theme-toggle-btn:hover, .menu-btn:hover {
+            background: rgba(52, 211, 153, 0.15);
+        }
+
+        .greeting-box {
+            font-size: 0.9rem;
+            color: var(--primary-glow);
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .digital-clock {
+            background: var(--clock-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .clock-time {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--primary-glow);
+            letter-spacing: 1px;
+            font-family: monospace;
+        }
+
+        .clock-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 70px;
+            right: 28px;
+            background: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            width: 160px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .dropdown-menu.active {
+            display: flex;
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--primary-glow);
+        }
+
+        .counter-card {
+            background: var(--counter-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .start-btn {
+            position: absolute;
+            left: 16px;
+            bottom: 20px;
+            background: #10b981;
+            color: #064e3b;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .start-btn:hover {
+            background: #059669;
+            color: #ffffff;
+        }
+
+        .start-btn.hidden {
+            display: none;
+        }
+
+        .ring-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+            width: 160px;
+            height: 160px;
+        }
+
+        .progress-ring__circle-bg {
+            fill: none;
+            stroke: var(--border-color);
+            stroke-width: 8;
+        }
+
+        .progress-ring__circle {
+            fill: none;
+            stroke: #10b981;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 440;
+            stroke-dashoffset: 440;
+            transition: stroke-dashoffset 0.5s ease;
+            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
+        }
+
+        .ring-content {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .days-number {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        .days-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        button.action-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background: #10b981;
+            color: #064e3b;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #059669;
+            color: #ffffff;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: #ffffff;
+        }
+
+        .notes-section {
+            background: var(--counter-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .notes-section h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .notes-list {
+            max-height: 140px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .empty-notes {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 10px;
+            font-style: italic;
+        }
+
+        .note-item {
+            background: var(--note-item-bg);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border-left: 3px solid #10b981;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .note-content-wrapper {
+            flex: 1;
+        }
+
+        .note-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .delete-note-btn {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .delete-note-btn:hover {
+            opacity: 1;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--modal-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 340px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .modal p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            outline: none;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-glow);
+        }
+
+        .about-text {
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .about-text strong {
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="splashScreen">
+        <div class="splash-salam">السَّلَامُ عَلَيْكُمْ</div>
+        <div class="splash-app-name">EverCount</div>
+    </div>
+
+    <div class="container" id="mainApp">
+        <div class="header">
+            <h1>EverCount</h1>
+            <div class="header-actions">
+                <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Day/Night Mode">🌙</button>
+                <button class="menu-btn" onclick="toggleMenu()">⋮</button>
+            </div>
+        </div>
+
+        <div class="greeting-box" id="greetingText">Good Morning, Rajon!</div>
+
+        <div class="digital-clock">
+            <div class="clock-time" id="clockTime">00:00:00 AM</div>
+            <div class="clock-date" id="clockDate">Loading...</div>
+        </div>
+
+        <div class="dropdown-menu" id="dropdownMenu">
+            <button class="dropdown-item" onclick="openAboutModal()">About App</button>
+        </div>
+
+        <div class="counter-card">
+            <button class="start-btn" id="startBtn" onclick="startStreak()">▶ Start</button>
+            
+            <div class="ring-container">
+                <svg class="progress-ring" width="160" height="160">
+                    <circle class="progress-ring__circle-bg" cx="80" cy="80" r="70" />
+                    <circle class="progress-ring__circle" id="progressRingCircle" cx="80" cy="80" r="70" />
+                </svg>
+                <div class="ring-content">
+                    <div class="days-number" id="dayCount">0</div>
+                </div>
+            </div>
+            <div class="days-label">Consecutive Days</div>
+        </div>
+
+        <div class="actions">
+            <button class="action-btn btn-primary" onclick="openNoteModal()">Add Note</button>
+            <button class="action-btn btn-danger" onclick="showResetWarning()">Reset</button>
+        </div>
+
+        <div class="notes-section">
+            <h3>Daily Notes / Log</h3>
+            <div class="notes-list" id="notesList">
+                <div class="empty-notes" id="emptyNotesMsg">No notes added yet.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="resetModal">
+        <div class="modal">
+            <h3 style="color: var(--danger);">Are you sure you want to reset?</h3>
+            <p>Resetting will clear your streak, bring back the start button, and clear current progress.</p>
+            <div class="modal-actions">
+                <button onclick="closeResetModal()" style="background: rgba(255,255,255,0.1); color: var(--text-main);">Cancel</button>
+                <button class="btn-danger" onclick="confirmReset()" style="background: var(--danger); color: white;">Yes, Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="noteModal">
+        <div class="modal" style="text-align: left;">
+            <h3 style="color: var(--primary-glow); margin-bottom: 12px;">Add Daily Note</h3>
+            <input type="text" id="noteInput" placeholder="Write your note or progress..." />
+            <div class="modal-actions">
+                <button onclick="closeNoteModal()" style="background: rgba(255,255,255,0.1); color: var(--text-main);">Cancel</button>
+                <button class="btn-primary" onclick="saveNote()" style="background: #10b981; color: #064e3b;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="aboutModal">
+        <div class="modal" style="text-align: left;">
+            <h3 style="color: var(--primary-glow); margin-bottom: 10px;">About EverCount</h3>
+            <div class="about-text">
+                <p><strong>Version:</strong> v1.0.0</p>
+                <p style="margin-top: 6px;"><strong>Developer:</strong> Md. Abid Hasan Rajon</p>
+                <p style="margin-top: 6px;"><strong>Purpose:</strong> Designed to track continuous daily consistency, goals, and personal progress logs with a modern dark emerald UI.</p>
+                <p style="margin-top: 6px;"><strong>Contact:</strong> ismerajon@gmail.com</p>
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn-primary" onclick="closeAboutModal()" style="background: #10b981; color: #064e3b; width: 100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isStreakStarted = false;
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splashScreen');
+                const mainApp = document.getElementById('mainApp');
+                splash.classList.add('fade-out');
+                mainApp.classList.add('show');
+            }, 1600);
+        });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (html.getAttribute('data-theme') === 'light') {
+                html.removeAttribute('data-theme');
+                themeBtn.innerText = '🌙';
+            } else {
+                html.setAttribute('data-theme', 'light');
+                themeBtn.innerText = '☀️';
+            }
+        }
+
+        function updateAppStatus() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            
+            let greeting = "Good Morning";
+            if (hours >= 12 && hours < 17) {
+                greeting = "Good Afternoon";
+            } else if (hours >= 17) {
+                greeting = "Good Evening";
+            }
+            document.getElementById('greetingText').innerText = `${greeting}, Rajon!`;
+
+            let displayHours = hours % 12;
+            displayHours = displayHours ? displayHours : 12;
+            const formattedHours = String(displayHours).padStart(2, '0');
+            const formattedMinutes = String(minutes).padStart(2, '0');
+            const formattedSeconds = String(seconds).padStart(2, '0');
+
+            document.getElementById('clockTime').innerText = `${formattedHours}:${formattedMinutes}:${formattedSeconds} ${ampm}`;
+
+            const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+            document.getElementById('clockDate').innerText = now.toLocaleDateString('en-US', options);
+
+            const totalSecondsInDay = 24 * 60 * 60;
+            const currentSecondsInDay = (hours * 3600) + (minutes * 60) + seconds;
+            const progressFraction = isStreakStarted ? (currentSecondsInDay / totalSecondsInDay) : 0;
+
+            const circle = document.getElementById('progressRingCircle');
+            const circumference = 440;
+            const offset = circumference - (progressFraction * circumference);
+            circle.style.strokeDashoffset = offset;
+        }
+
+        setInterval(updateAppStatus, 1000);
+        updateAppStatus();
+
+        function startStreak() {
+            isStreakStarted = true;
+            document.getElementById('dayCount').innerText = '1';
+            document.getElementById('startBtn').classList.add('hidden');
+        }
+
+        function toggleMenu() {
+            document.getElementById('dropdownMenu').classList.toggle('active');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.menu-btn')) {
+                const dropdowns = document.getElementsByClassName("dropdown-menu");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    let openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('active')) {
+                        openDropdown.classList.remove('active');
+                    }
+                }
+            }
+        }
+
+        function showResetWarning() {
+            document.getElementById('resetModal').classList.add('active');
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetModal').classList.remove('active');
+        }
+
+        function confirmReset() {
+            isStreakStarted = false;
+            document.getElementById('dayCount').innerText = '0';
+            document.getElementById('startBtn').classList.remove('hidden');
+            closeResetModal();
+        }
+
+        function openNoteModal() {
+            document.getElementById('noteModal').classList.add('active');
+            document.getElementById('noteInput').value = '';
+        }
+
+        function closeNoteModal() {
+            document.getElementById('noteModal').classList.remove('active');
+        }
+
+        function openAboutModal() {
+            document.getElementById('aboutModal').classList.add('active');
+        }
+
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+
+        function saveNote() {
+            const text = document.getElementById('noteInput').value.trim();
+            if(!text) return;
+
+            const notesList = document.getElementById('notesList');
+            const emptyMsg = document.getElementById('emptyNotesMsg');
+            if(emptyMsg) emptyMsg.remove();
+
+            const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+            const newItem = document.createElement('div');
+            newItem.className = 'note-item';
+            newItem.innerHTML = `
+                <div class="note-content-wrapper">
+                    <div class="note-date">${today}</div>
+                    <div>${text}</div>
+                </div>
+                <button class="delete-note-btn" onclick="deleteNote(this)" title="Delete Note">✕</button>
+            `;
+
+            notesList.prepend(newItem);
+            closeNoteModal();
+        }
+
+        function deleteNote(btn) {
+            const item = btn.closest('.note-item');
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+                item.remove();
+                const notesList = document.getElementById('notesList');
+                if(notesList.children.length === 0) {
+                    notesList.innerHTML = `<div class="empty-notes" id="emptyNotesMsg">No notes added yet.</div>`;
+                }
+            }, 300);
+        }
+    </script>
+</body>
+</html>
